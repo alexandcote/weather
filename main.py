@@ -4,6 +4,7 @@ import serial
 import argparse
 import requests
 import logging
+import logging.handlers
 import struct
 
 from weather import Weather
@@ -12,12 +13,18 @@ from raven.conf import setup_logging
 from raven.handlers.logging import SentryHandler
 
 ACK = '\x06'
+SLEEP = 10
 device = None
 logger = logging.getLogger(__name__)
 
 def init(dsn):
     handler = SentryHandler(dsn)
+    syslog_handler = logging.handlers.SysLogHandler(address = '/dev/log')
+
+    logger.setLevel(logging.INFO)
     handler.setLevel(logging.WARN)
+
+    logger.addHandler(syslog_handler)
     setup_logging(handler)
 
 def valid_args():
@@ -32,12 +39,17 @@ def valid_args():
 def initialize_communication():
     count = 0
 
+    logger.info("Weather.Reader: Start the communication with the device")
+
     while count < 3:
         device.write('\n')
         x = device.readline()
 
         if x == '\r\n':
+            logger.info("Weather.Reader: Communication etablished")
             return True
+
+        logger.info("Weather.Reader: Communcaation failed {0}".format(count))
 
         time.sleep(1.2)
         count += 1
@@ -45,19 +57,24 @@ def initialize_communication():
     return False
 
 def read_data():
+    logger.info("Weather.Reader: Read Data")
     if initialize_communication():
         device.write('LOOP 1\n')
 
         if device.read(2)[-1] == ACK:
-            response = device.read(99)
-            if CRCCCITT().calculate(response) == 0:
-                return Weather(response)
+            logger.info("Weather.Reader: Device ACK")
+
+            data = device.read(99)
+            if CRCCCITT().calculate(data) == 0:
+                logger.info("Weather.Reader: CRC is valid: {data}".format(
+                    data=data))
+                return Weather(data)
             else:
-                logger.warn('CRC not valid')
+                logger.warn("Weather.Reader: CRC not valid")
         else:
-            logger.warn('Error in the read data')
+            logger.warn("Weather.Reader: Device don't ACK")
     else:
-        logger.warn('Initialization failed')
+        logger.warn('Weather.Reader: Initialization failed')
 
     return None
 
@@ -66,7 +83,7 @@ def send_data(server_token, server_url, data):
         'Authorization': server_token,
         'Content-Type': 'application/json'
     }
-
+    logger.info("Weather.Reader: Send data to the api server")
     response = requests.post(
         server_url,
         json=dict(data=data),
@@ -77,11 +94,16 @@ def send_data(server_token, server_url, data):
         logger.warn(
             "Can't add new data in the database. HTTP code : {status}".format(
                 status=response.status_code))
-
+    else:
+        logger.info(
+            "Weather.Reader: The data was add : {response}".format(
+                response=response))
 def main():
     global device
     args = valid_args()
     init(args.dsn)
+
+    logger.info("Weather.Reader: Initialization")
 
     device = serial.Serial(
         port = args.device_port,
@@ -93,7 +115,10 @@ def main():
         weather = read_data()
         if weather:
             send_data(args.server_token, args.server_url, weather.toDict())
-            time.sleep(60)
+            logger.info("Weather.Reader: Sleep for {0} seconds".format(SLEEP))
+            time.sleep(SLEEP)
+        else:
+            logger.warn("Weather.Reader: Weather is empty")
 
 if __name__ == "__main__":
     main()

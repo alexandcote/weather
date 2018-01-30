@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import time
 import serial
 import argparse
@@ -27,15 +28,6 @@ def init(dsn):
     logger.addHandler(syslog_handler)
     setup_logging(handler)
 
-def valid_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('device_port',  help='Device Port, (i.e: /dev/ttyUSB0)')
-    parser.add_argument('server_url',  help='Server URL, (i.e: https://my_server.com/api/new_data)')
-    parser.add_argument('server_token',  help='Server Token, (i.e: Bearer <token>')
-    parser.add_argument('dsn',  help='Server Token, (i.e: https://xxx@sentry.io/<project> <token>')
-    args = parser.parse_args()
-    return args
-
 def initialize_communication():
     count = 0
 
@@ -58,6 +50,7 @@ def initialize_communication():
 
 def read_data():
     logger.info("Weather.Reader: Read Data")
+
     if initialize_communication():
         device.write('LOOP 1\n')
 
@@ -79,11 +72,13 @@ def read_data():
     return None
 
 def send_data(server_token, server_url, data):
+    logger.info("Weather.Reader: Send data to the api server")
+
     headers = {
         'Authorization': server_token,
         'Content-Type': 'application/json'
     }
-    logger.info("Weather.Reader: Send data to the api server")
+
     response = requests.post(
         server_url,
         json=dict(data=data),
@@ -100,21 +95,27 @@ def send_data(server_token, server_url, data):
                 response=response))
 def main():
     global device
-    args = valid_args()
-    init(args.dsn)
+
+    DSN = os.getenv('WEATHER_SENTRY_DSN', '')
+    PORT = os.getenv('WEATHER_DEVICE_PORT', '/dev/ttyUSB0')
+    SERVER_URL = os.getenv('WEATHER_SERVER_URL', '')
+    SERVER_TOKEN = os.getenv('WEATHER_SERVER_TOKEN', '')
+
+    init(DSN)
 
     logger.info("Weather.Reader: Initialization")
 
     device = serial.Serial(
-        port = args.device_port,
+        port = PORT,
         baudrate = 19200,
         timeout = 1.2
     )
 
     while True:
         weather = read_data()
+
         if weather:
-            send_data(args.server_token, args.server_url, weather.toDict())
+            send_data(SERVER_TOKEN, SERVER_URL, weather.toDict())
             logger.info("Weather.Reader: Sleep for {0} seconds".format(SLEEP))
             time.sleep(SLEEP)
         else:

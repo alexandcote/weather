@@ -14,7 +14,6 @@ from raven.conf import setup_logging
 from raven.handlers.logging import SentryHandler
 
 ACK = '\x06'
-SLEEP = 10
 device = None
 logger = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ def initialize_communication():
             logger.info("Weather.Reader: Communication etablished")
             return True
 
-        logger.info("Weather.Reader: Communcaation failed {0}".format(count))
+        logger.info("Weather.Reader: Communication failed {0}".format(count))
 
         time.sleep(1.2)
         count += 1
@@ -96,6 +95,7 @@ def send_data(server_token, server_url, data):
 def main():
     global device
 
+    SLEEP = float(os.getenv('WEATHER_SLEEP', 60))
     DSN = os.getenv('WEATHER_SENTRY_DSN', '')
     PORT = os.getenv('WEATHER_DEVICE_PORT', '/dev/ttyUSB0')
     SERVER_URL = os.getenv('WEATHER_SERVER_URL', '')

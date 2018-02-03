@@ -97,7 +97,7 @@ def send_data(server_token, server_url, data):
 
 
 def main():
-    global device
+    global DEVICE
 
     sleep = float(os.getenv('WEATHER_SLEEP', 60))
     dsn = os.getenv('WEATHER_SENTRY_DSN', '')
@@ -109,7 +109,7 @@ def main():
 
     logger.info("Weather.Reader: Initialization")
 
-    device = serial.Serial(
+    DEVICE = serial.Serial(
         port=port,
         baudrate=19200,
         timeout=1.2

@@ -1,6 +1,7 @@
 import json
 import struct
 
+
 class Weather:
     def __init__(self, data):
         self.barometer = float(self.get_two_bytes(data, 7)) / 1000

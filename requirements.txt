@@ -1,0 +1,4 @@
+pyserial==3.4
+requests==2.18.4
+raven==6.5.0
+PyCRC==1.21

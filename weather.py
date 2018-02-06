@@ -53,9 +53,10 @@ class Weather:
     def get_date(self, data, offset):
         value = self.get_two_bytes(data, offset)
         if value != -1:
-            month = self.try_or(lambda: int(bin(value)[-4:], 2), None)
-            day = self.try_or(lambda: int(bin(value)[-8:-4], 2), None)
-            year = self.try_or(lambda: int(bin(value)[-15:-8], 2) + 2000, None)
+            binary = bin(value)[2:].zfill(16)
+            month = self.try_or(lambda: int(binary[:4], 2), None)
+            day = self.try_or(lambda: int(binary[4:9], 2), None)
+            year = self.try_or(lambda: int(binary[9:], 2) + 2000, None)
 
             if month and day and year:
                 return "{year}-{month:02d}-{day:02d}".format(

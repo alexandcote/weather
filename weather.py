@@ -4,6 +4,7 @@ import struct
 
 class Weather:
     def __init__(self, data):
+        self.error = False
         self.barometer = float(self.get_two_bytes(data, 7)) / 1000
         self.bar_trend = self.get_sign(data, 3)
         self.in_temperature = float(self.get_two_bytes(data, 9)) / 10
@@ -34,23 +35,32 @@ class Weather:
         self.time_of_sunrise = self.get_time(data, 91)
         self.time_of_sunset = self.get_time(data, 93)
 
+    def try_or(self, fn, default):
+        try:
+            return fn()
+        except:
+            self.error = True
+            return default
+
     def get_sign(self, data, offset):
-        return struct.unpack('b', data[offset])[0]
+        return self.try_or(lambda: struct.unpack('b', data[offset])[0], 0)
 
     def get_unsign(self, data, offset):
-        return struct.unpack('B', data[offset])[0]
+        return self.try_or(lambda: struct.unpack('B', data[offset])[0], 0)
 
     def get_two_bytes(self, data, offset):
-        return struct.unpack('<h', ''.join([data[offset], data[offset + 1]]))[0]
+        return self.try_or(lambda: struct.unpack('<h', ''.join([data[offset], data[offset + 1]]))[0], 0)
 
     def get_date(self, data, offset):
         value = self.get_two_bytes(data, offset)
         if value != -1:
-            month = int(bin(value)[-4:], 2)
-            day = int(bin(value)[-8:-4], 2)
-            year = int(bin(value)[-15:-8], 2) + 2000
-            return "{year}-{month:02d}-{day:02d}".format(
-                year=year, month=month, day=day)
+            month = self.try_or(lambda: int(bin(value)[-4:], 2), None)
+            day = self.try_or(lambda: int(bin(value)[-8:-4], 2), None)
+            year = self.try_or(lambda: int(bin(value)[-15:-8], 2) + 2000, None)
+
+            if month and day and year:
+                return "{year}-{month:02d}-{day:02d}".format(
+                    year=year, month=month, day=day)
         return None
 
     def get_time(self, data, offset):
@@ -63,9 +73,8 @@ class Weather:
         value = self.get_two_bytes(data, offset)
         return float((value * 300) / 512) / 100
 
-    def toDict(self):
-        return self.__dict__
+    def is_valid(self):
+        return self.error
 
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__,
-            sort_keys=True, indent=4)
+    def to_dict(self):
+        return self.__dict__

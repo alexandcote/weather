@@ -119,11 +119,17 @@ def main():
         weather = read_data()
 
         if weather:
-            send_data(server_token, server_url, weather.toDict())
-            logger.info("Weather.Reader: Sleep for {0} seconds".format(sleep))
-            time.sleep(sleep)
+            if weather.is_valid():
+                send_data(server_token, server_url, weather.to_dict())
+                logger.info("Weather.Reader: Sleep for {0} seconds".format(sleep))
+                time.sleep(sleep)
+            else:
+                logger.warning("Weather.Reader: Weather data is invalid")
         else:
             logger.warning("Weather.Reader: Weather is empty")
+
+        # Clean memory
+        del weather
 
 
 if __name__ == "__main__":

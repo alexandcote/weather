@@ -1,4 +1,3 @@
-import json
 import struct
 
 
@@ -74,7 +73,7 @@ class Weather:
         return float((value * 300) / 512) / 100
 
     def is_valid(self):
-        return self.error
+        return not self.error
 
     def to_dict(self):
         return self.__dict__

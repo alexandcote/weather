@@ -86,7 +86,7 @@ def send_data(server_token, server_url, data):
         headers=headers
     )
 
-    if response.status_code != 201:
+    if response.status_code != 204:
         logger.warning(
             "Can't add new data in the database. HTTP code : {status}".format(
                 status=response.status_code))

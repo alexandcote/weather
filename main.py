@@ -5,6 +5,7 @@ import serial
 import requests
 import logging
 import logging.handlers
+import urllib3
 
 from weather import Weather
 from PyCRC.CRCCCITT import CRCCCITT
@@ -14,7 +15,7 @@ from raven.handlers.logging import SentryHandler
 ACK = '\x06'
 DEVICE = None
 logger = logging.getLogger(__name__)
-
+urllib3.disable_warnings()
 
 def init(dsn):
     handler = SentryHandler(dsn)
@@ -83,7 +84,8 @@ def send_data(server_token, server_url, data):
     response = requests.post(
         server_url,
         json=dict(data=data),
-        headers=headers
+        headers=headers,
+        verify=False
     )
 
     if response.status_code != 204:
